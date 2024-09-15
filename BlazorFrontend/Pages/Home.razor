@@ -1,52 +1,176 @@
 ﻿@page "/"
+@using Common
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject IConfiguration Configuration
+@implements IAsyncDisposable
 
 <PageTitle>Home</PageTitle>
 
 <h1>Nederlandse Loterij - Klik en win! </h1>
-
-<div class="grid">
-    @for (int i = 0; i < 10000; i++)
-    {
-    var localIndex = i; 
-    <div class="square" @onclick="() => FlipSquare(localIndex)">
-        @if (flipped[localIndex])
+@if (grid != null)
+{
+    <div class="grid">
+        @for (int i = 0; i < grid.Length; i++)
         {
-        <span class="number @(prizes[localIndex] > 0 ? "win" : "lose")">@prizes[localIndex]</span>
+            var localIndex = i;
+            <div class="square" @onclick="() => FlipSquare(localIndex)">
+                @if (HasElementBeenFlipped(grid[localIndex]))
+                {
+                    var flippedElement = (FlippedGridElementExt)grid[localIndex];
+                    var (_, youWon) = GetWinOrLose(flippedElement);
+                    <span class="number @(youWon ? "win" : "lose")">@(youWon ? flippedElement.result : "X")</span>
+                }
+            </div>
         }
     </div>
-    }
-</div>
 
-@if (showPopup)
+    <button @onclick="UpdateAllSquares">Update All Squares</button>
+    
+    @if (showPopup)
+    {
+        <div class="popup">
+            You @(lastPrize > 0 ? "won! Prize: " + lastPrize : "lost!")
+        </div>
+    }
+}
+else
 {
-    <div class="popup">
-        You @(lastPrize > 0 ? "won! Prize: " + lastPrize : "lost!")
-    </div>
+<p>Loading...</p>
 }
 
 @code {
-    bool[] flipped = new bool[10000];
-    int[] prizes = new int[10000];
+    private HubConnection _hubConnection;
+
+    GridElementExt[] grid;
     bool showPopup = false;
     int lastPrize = 0;
+    private string _userId;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var random = new Random();
-        for (int i = 0; i < prizes.Length; i++)
+        var apiurl = Configuration["ApiBaseUrl"];
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(apiurl)
+            .Build();
+
+        _hubConnection.On<GridElementExt[]>("ReceiveGrid", (receivedGrid) =>
         {
-            prizes[i] = random.Next(0, 11); 
+            if (receivedGrid == null || receivedGrid.Length == 0)
+            {
+                Console.WriteLine("Received an empty grid.");
+            }
+            else
+            {
+                grid = receivedGrid;
+                Console.WriteLine("Received initial grid with " + receivedGrid.Length + " elements.");
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<FlippedGridElementExt>("UpdateGridElement", (flippedGridElementExt) =>
+        {
+            if (grid[flippedGridElementExt.index] is not FlippedGridElementExt)
+            {
+                grid[flippedGridElementExt.index] = flippedGridElementExt;
+            }
+            InvokeAsync(StateHasChanged);
+        });
+        
+        try
+        {
+            await _hubConnection.StartAsync();
+            Console.WriteLine("Connection established. State: " + _hubConnection.State);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error establishing connection: " + ex.Message);
         }
     }
-
-    async void FlipSquare(int index)
+    
+    async Task UpdateAllSquares()
     {
-        flipped[index] = true;
-        lastPrize = prizes[index];
-        showPopup = true;
-        StateHasChanged(); 
-        await Task.Delay(1500);
-        showPopup = false;
-        StateHasChanged(); 
+        List<Task> tasks = new ();
+        int maxConcurrency = 50; // Set the maximum number of concurrent tasks
+        SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrency);
+        for (int i = 0; i < grid.Length; i++)
+        {
+            await semaphore.WaitAsync(); 
+            int localIndex = i;
+            if (grid[i] is UnflippedGridElementExt)
+            {
+                var flipElementAndUpdate = async () =>
+                {
+                    try
+                    {
+                        var result = await _hubConnection.InvokeAsync<FlippedGridElementExt>("FlipGridElement", localIndex);
+                        grid[localIndex] = result;
+                        InvokeAsync(StateHasChanged);
+                    }
+                    finally
+                    {
+                        semaphore.Release(); // Release the semaphore
+                    }
+                };
+                tasks.Add(flipElementAndUpdate());
+            }
+
+        }
+
+        await Task.WhenAll(tasks);
+    }
+    
+    async Task FlipSquare(int index)
+    {
+        var result = await _hubConnection.InvokeAsync<FlippedGridElementExt>("FlipGridElement", index);
+        grid[index] = result;
+        // showPopup = true;
+        // StateHasChanged(); 
+        // await Task.Delay(1500);
+        // showPopup = false;
+        // StateHasChanged(); 
+    }
+
+    public (string, bool) GetWinOrLose(FlippedGridElementExt elementExt)
+    {
+        switch (elementExt.result)
+        {
+            case MonetaryPrizeResult prize:
+                if (prize.AreYouTheFirstFlipper)
+                {
+                    return ($"You won {prize} euros!", true);
+                }
+                else
+                {
+                    return ("Someone else was just a bit faster...", false);
+                }
+
+            case NoPrizeResult _:
+                return ($"Too bad, so sad - you won nothing...", false);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+    
+    public bool HasElementBeenFlipped(GridElementExt elementExt)
+    {
+        switch (elementExt)
+        {
+            case FlippedGridElementExt flippedGridElement:
+                return true;
+            case UnflippedGridElementExt unflippedGridElement:
+                return false;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(elementExt));
+        }
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
     }
 }

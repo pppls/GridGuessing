@@ -26,7 +26,19 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+
     <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+        function getUserId() {
+            let userId = localStorage.getItem('userId');
+            if (!userId) {
+                userId = Math.random().toString(36).substring(2, 15);
+                localStorage.setItem('userId', userId);
+            }
+            return userId;
+        }
+    </script>
 </body>
 
 </html>
+
