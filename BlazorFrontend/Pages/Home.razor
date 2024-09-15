@@ -1,0 +1,52 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>Nederlandse Loterij - Klik en win! </h1>
+
+<div class="grid">
+    @for (int i = 0; i < 10000; i++)
+    {
+    var localIndex = i; 
+    <div class="square" @onclick="() => FlipSquare(localIndex)">
+        @if (flipped[localIndex])
+        {
+        <span class="number @(prizes[localIndex] > 0 ? "win" : "lose")">@prizes[localIndex]</span>
+        }
+    </div>
+    }
+</div>
+
+@if (showPopup)
+{
+    <div class="popup">
+        You @(lastPrize > 0 ? "won! Prize: " + lastPrize : "lost!")
+    </div>
+}
+
+@code {
+    bool[] flipped = new bool[10000];
+    int[] prizes = new int[10000];
+    bool showPopup = false;
+    int lastPrize = 0;
+
+    protected override void OnInitialized()
+    {
+        var random = new Random();
+        for (int i = 0; i < prizes.Length; i++)
+        {
+            prizes[i] = random.Next(0, 11); 
+        }
+    }
+
+    async void FlipSquare(int index)
+    {
+        flipped[index] = true;
+        lastPrize = prizes[index];
+        showPopup = true;
+        StateHasChanged(); 
+        await Task.Delay(1500);
+        showPopup = false;
+        StateHasChanged(); 
+    }
+}
