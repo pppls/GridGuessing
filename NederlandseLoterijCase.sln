@@ -4,6 +4,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorFrontend", "BlazorFro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Backend", "Backend\Backend.csproj", "{F6187427-B13D-451B-9D0C-DD9F4D54CF7A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{332D22BC-A14A-40C0-8D2E-18CB84424E9B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{8D9AF315-7FC3-40C7-8C9D-07464338F823}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +22,13 @@ Global
 		{F6187427-B13D-451B-9D0C-DD9F4D54CF7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6187427-B13D-451B-9D0C-DD9F4D54CF7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6187427-B13D-451B-9D0C-DD9F4D54CF7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{332D22BC-A14A-40C0-8D2E-18CB84424E9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{332D22BC-A14A-40C0-8D2E-18CB84424E9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{332D22BC-A14A-40C0-8D2E-18CB84424E9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{332D22BC-A14A-40C0-8D2E-18CB84424E9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D9AF315-7FC3-40C7-8C9D-07464338F823}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D9AF315-7FC3-40C7-8C9D-07464338F823}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D9AF315-7FC3-40C7-8C9D-07464338F823}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D9AF315-7FC3-40C7-8C9D-07464338F823}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
