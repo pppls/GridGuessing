@@ -1,0 +1,70 @@
+﻿@using System.Runtime.CompilerServices
+@using Common
+@using Microsoft.AspNetCore.SignalR.Client
+
+<div class="square" @onclick="Flip">
+    @if (HasElementBeenFlipped(Element))
+    {
+        var flippedElement = (FlippedGridElementExt)Element;
+        var (_, youWon) = GetWinOrLose(flippedElement);
+        <span class="number @(youWon ? "win" : "lose")">@(youWon ? flippedElement.result : "X")</span>
+    }
+    
+</div>
+
+@code {
+    [Parameter] public GridElementExt Element { get; set; }
+    [Parameter] public HubConnection HubConnection { get; set; }
+    [Parameter] public Action<SquareComponent> RegisterComponent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        RegisterComponent.Invoke(this);
+    }
+    
+    public async Task UpdateElement(FlippedGridElementExt updatedElement)
+    {
+        Element = updatedElement;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Flip()
+    {
+        Element = await HubConnection.InvokeAsync<FlippedGridElementExt>("FlipGridElement", Element.index);
+        InvokeAsync(StateHasChanged);
+    }
+    
+    public (string, bool) GetWinOrLose(FlippedGridElementExt elementExt)
+    {
+        switch (elementExt.result)
+        {
+            case MonetaryPrizeResult prize:
+                if (prize.AreYouTheFirstFlipper)
+                {
+                    return ($"You won {prize} euros!", true);
+                }
+                else
+                {
+                    return ("Someone else was just a bit faster...", false);
+                }
+
+            case NoPrizeResult _:
+                return ($"Too bad, so sad - you won nothing...", false);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+    
+    public bool HasElementBeenFlipped(GridElementExt elementExt)
+    {
+        switch (elementExt)
+        {
+            case FlippedGridElementExt flippedGridElement:
+                return true;
+            case UnflippedGridElementExt unflippedGridElement:
+                return false;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(elementExt));
+        }
+    }
+}
