@@ -30,8 +30,26 @@
 
     private async Task Flip()
     {
-        Element = await HubConnection.InvokeAsync<FlippedGridElementExt>("FlipGridElement", Element.index);
-        InvokeAsync(StateHasChanged);
+        if (Element is UnflippedGridElementExt)
+        {
+            Element = await HubConnection.InvokeAsync<GridElementExt>("FlipGridElement", Element.index);
+            switch (Element)
+            {
+                case FlippedGridElementExt _:
+                    showPopup = true;
+                    await InvokeAsync(StateHasChanged);
+                    await Task.Delay(1500);
+                    showPopup = false;
+                    await InvokeAsync(StateHasChanged);
+                    break;
+                case UnflippedGridElementExt _:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(Element));
+            }
+
+            
+        }
     }
     
     public (string, bool) GetWinOrLose(FlippedGridElementExt elementExt)
