@@ -24,16 +24,15 @@ public static class DataGenerator
         }
 
         context.SaveChanges();
-        var x = Enumerable.Range(0, numberOfElements);
         var random = new Random();
-        var allIndices = Enumerable.Range(0, numberOfElements).ToList();
+        var allIndices = Enumerable.Range(0, numberOfElements).OrderBy(_ => random.Next()).ToList();
         var indices = allIndices.Take(101).ToHashSet();
         var indexWithMainPrice = indices.First();
         indices.Remove(indexWithMainPrice);
         context.GridElements.Single(element => element.Index == indexWithMainPrice).Prize =
             new MonetaryPrize()
             {
-                MonetaryValue = 25000 //In de praktijk zal je ook valuta moeten specificeren, dat laat ik nu achterwege
+                MonetaryValue = 25000
             };
 
         decimal[] consolationPrizes = { 1, 10, 100, 1000 };
