@@ -1,5 +1,4 @@
-﻿@using System.Runtime.CompilerServices
-@using Common
+﻿@using Common
 @using Microsoft.AspNetCore.SignalR.Client
 
 <div class="square" @onclick="Flip">
@@ -7,15 +6,16 @@
     {
         var flippedElement = (FlippedGridElementExt)Element;
         var (_, youWon) = GetWinOrLose(flippedElement);
-        <span class="number @(youWon ? "win" : "lose")">@(youWon ? flippedElement.result : "X")</span>
+        <span class="number @(youWon ? "win" : "lose")">@(youWon ? ((MonetaryPrizeResult)flippedElement.result).value : "X")</span>
     }
     
 </div>
 
 @code {
-    [Parameter] public GridElementExt Element { get; set; }
-    [Parameter] public HubConnection HubConnection { get; set; }
-    [Parameter] public Action<SquareComponent> RegisterComponent { get; set; }
+    bool showPopup = false;
+    [Parameter] public required GridElementExt Element { get; set; }
+    [Parameter] public required HubConnection HubConnection { get; set; }
+    [Parameter] public required Action<SquareComponent> RegisterComponent { get; set; }
 
     protected override void OnInitialized()
     {
@@ -39,13 +39,13 @@
         switch (elementExt.result)
         {
             case MonetaryPrizeResult prize:
-                if (prize.AreYouTheFirstFlipper)
+                if (prize.areYouTheFirstFlipper)
                 {
                     return ($"You won {prize} euros!", true);
                 }
                 else
                 {
-                    return ("Someone else was just a bit faster...", false);
+                    return ("Someone else was just a bit faster...", true);
                 }
 
             case NoPrizeResult _:
