@@ -1,6 +1,5 @@
 using Backend.Data;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 
 namespace Test;
 

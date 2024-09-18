@@ -1,8 +1,6 @@
 ﻿@page "/"
 @using Common
 @using Microsoft.AspNetCore.SignalR.Client
-@inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
 @inject IConfiguration Configuration
 @implements IAsyncDisposable
 
@@ -17,8 +15,6 @@
             <SquareComponent Element="@element" HubConnection="@_hubConnection" RegisterComponent="RegisterSquareComponent" />
         }
     </div>
-
-    <button @onclick="UpdateAllSquares">Update All Squares</button>
     
     @if (showPopup)
     {
@@ -81,56 +77,13 @@ else
     {
         squareComponents[component.Element.index] = component;
     }
-    
-    async Task UpdateAllSquares()
-    {
-        List<Task> tasks = new ();
-        int maxConcurrency = 50; // Set the maximum number of concurrent tasks
-        SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrency);
-        for (int i = 0; i < grid.Length; i++)
-        {
-            await semaphore.WaitAsync(); 
-            int localIndex = i;
-            if (grid[i] is UnflippedGridElementExt)
-            {
-                var flipElementAndUpdate = async () =>
-                {
-                    try
-                    {
-                        var result = await _hubConnection.InvokeAsync<FlippedGridElementExt>("FlipGridElement", localIndex);
-                        grid[localIndex] = result;
-                        InvokeAsync(StateHasChanged);
-                    }
-                    finally
-                    {
-                        semaphore.Release(); // Release the semaphore
-                    }
-                };
-                tasks.Add(flipElementAndUpdate());
-            }
-
-        }
-
-        await Task.WhenAll(tasks);
-    }
-    
-    async Task FlipSquare(int index)
-    {
-        var result = await _hubConnection.InvokeAsync<FlippedGridElementExt>("FlipGridElement", index);
-        grid[index] = result;
-        // showPopup = true;
-        // StateHasChanged(); 
-        // await Task.Delay(1500);
-        // showPopup = false;
-        // StateHasChanged(); 
-    }
 
     public (string, bool) GetWinOrLose(FlippedGridElementExt elementExt)
     {
         switch (elementExt.result)
         {
             case MonetaryPrizeResult prize:
-                if (prize.AreYouTheFirstFlipper)
+                if (prize.areYouTheFirstFlipper)
                 {
                     return ($"You won {prize} euros!", true);
                 }
@@ -142,7 +95,7 @@ else
             case NoPrizeResult _:
                 return ($"Too bad, so sad - you won nothing...", false);
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(nameof(elementExt.result), elementExt.result, "Invalid value for switch case.");
         }
     }
     

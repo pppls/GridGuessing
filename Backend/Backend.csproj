@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Dorssel.EntityFrameworkCore.Sqlite.Timestamp" Version="8.0.2" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.8" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="8.0.8" />

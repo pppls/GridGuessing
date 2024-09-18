@@ -3,8 +3,7 @@ using Backend;
 using Backend.Data;
 using Common;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Swashbuckle.AspNetCore.SwaggerUI;
+using Dorssel.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,10 +35,11 @@ builder.Services.AddHttpClient();
 // Configure DbContext based on the environment
 if (builder.Environment.IsDevelopment())
 {
-    // builder.Services.AddDbContext<GridDbContext>(options =>
-    //     options.UseSqlite(builder.Configuration.GetConnectionString("SQLiteConnection")));
     builder.Services.AddDbContext<GridDbContext>(options =>
-        options.UseInMemoryDatabase("InMemoryDb")); 
+        options.UseSqlite(builder.Configuration.GetConnectionString("SQLiteConnection"))
+            .UseSqliteTimestamp());
+    // builder.Services.AddDbContext<GridDbContext>(options =>
+    //     options.UseInMemoryDatabase("InMemoryDb").EnableSensitiveDataLogging()); 
 }
 else
 {
