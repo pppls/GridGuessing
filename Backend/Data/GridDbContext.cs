@@ -26,6 +26,17 @@ public class GridDbContext : DbContext
         
         modelBuilder.Entity<MonetaryPrize>().ToTable("MonetaryPrizes");
         modelBuilder.Entity<NonMonetaryPrize>().ToTable("NonMonetaryPrizes");
+        
+        modelBuilder.Entity<GridPromotionalGame>()
+            .HasMany(g => g.GridElements)
+            .WithOne(e => e.GridPromotionalGame)
+            .HasForeignKey(e => e.GridPromotionalGameId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<GridElement>()
+            .Property(b => b.Timestamp)
+            .IsConcurrencyToken()
+            .ValueGeneratedOnAddOrUpdate();
     }
 }
 
