@@ -2,7 +2,8 @@
 
 public static class DataGenerator
 {
-    public static void SeedData(GridDbContext context, int numberOfElements)
+    //Can be made more generic in the future
+    public static void SeedData(GridDbContext context, int numberOfElements) 
     {
         context.PromotionalGames.Add(new GridPromotionalGame
         {

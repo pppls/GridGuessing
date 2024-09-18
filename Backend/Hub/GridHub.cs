@@ -8,7 +8,7 @@ namespace Backend;
 
 public class GridHub : Hub
 {
-    private GridDbContext _dbContext;
+    private readonly GridDbContext _dbContext;
 
     public GridHub(GridDbContext dbContext)
     {

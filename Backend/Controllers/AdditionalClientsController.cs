@@ -26,7 +26,7 @@ public class AdditionalClientsController : Controller
             .WithUrl(apiurl)
             .Build();
         await hubConnection.StartAsync();
-        hubConnection.On<GridElementExt[]>("ReceiveGrid", (Action<GridElementExt[]>)(async (receivedGrid) =>
+        hubConnection.On("ReceiveGrid", (Action<GridElementExt[]>)(async (receivedGrid) =>
         {
             var indices = new BlockingCollection<int>(new ConcurrentQueue<int>(Enumerable.Range(0, receivedGrid.Length)));
             for (int i = 0; i < n; i++)
@@ -35,9 +35,7 @@ public class AdditionalClientsController : Controller
             }
             await Task.WhenAll(tasks);
         }));
-
-
-
+        
         return Ok();
     }
 

@@ -10,6 +10,26 @@ namespace Test;
 
 public class GridHubTest
 {
+    private Mock<IHubCallerClients> _mockClients;
+    private Mock<ISingleClientProxy> _mockCallerClient;
+    private Mock<ISingleClientProxy> _mockOthersClient;
+    private Mock<HubCallerContext> _mockHubCallerContext;
+
+    public GridHubTest()
+    {
+        _mockClients = new Mock<IHubCallerClients>();
+        _mockCallerClient = new Mock<ISingleClientProxy>();
+        _mockOthersClient = new Mock<ISingleClientProxy>();
+        _mockHubCallerContext = new Mock<HubCallerContext>();
+        
+        _mockClients.Setup(clients => clients.Caller).Returns(_mockCallerClient.Object);
+        _mockClients.Setup(clients => clients.Others).Returns(_mockOthersClient.Object);
+        _mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
+        _mockOthersClient.Setup(client => client.SendCoreAsync(
+                It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Verifiable("Message should be sent to others");;
+    }
+    
     //Deze test gaat af als het mogelijk is dat dezelfde prijs twee keer
     //toegereikt kan worden aan iemand (doordat tegelijkertijd de db geaccessed wordt bijvoorbeeld)
     [Fact]
@@ -65,22 +85,8 @@ public class GridHubTest
         //Arrange
         var dbContext = TestHelper.Setup("Mode=Memory;Cache=Shared");
         
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCallerClient = new Mock<ISingleClientProxy>();
-        var mockOthersClient = new Mock<ISingleClientProxy>();
-        var mockHubCallerContext = new Mock<HubCallerContext>();
         
-        mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
-        mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
-        mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
-        
-        mockOthersClient.Setup(client => client.SendCoreAsync(
-                It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-            .Verifiable("Message should be sent to others");;
-        mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
-        mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
-        
-        var hub = new GridHub(dbContext) { Clients = mockClients.Object, Context = mockHubCallerContext.Object };
+        var hub = new GridHub(dbContext) { Clients = _mockClients.Object, Context = _mockHubCallerContext.Object };
         
         var gridElementsWithPrize = dbContext.GridElements
             .Include(gridElement => gridElement.Prize!).Where(element => element.Prize is MonetaryPrize);
@@ -95,7 +101,7 @@ public class GridHubTest
         //Others should receive result with areYouTheFirstFlipper false
         var expectedResultForOthers = monetaryPrizeResult with {areYouTheFirstFlipper = false};
         object[] expectedElementForOthers = [flippedGridElement with { result = expectedResultForOthers }];
-        mockOthersClient.Verify(
+        _mockOthersClient.Verify(
             client => client.SendCoreAsync("UpdateGridElement", expectedElementForOthers, It.IsAny<CancellationToken>()),
             Times.Once(), // Ensures the method was called exactly once
             "Others should receive exactly one message");
@@ -110,19 +116,7 @@ public class GridHubTest
         //Arrange
         var dbContext = TestHelper.Setup("Mode=Memory;Cache=Shared");
         
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCallerClient = new Mock<ISingleClientProxy>();
-        var mockOthersClient = new Mock<ISingleClientProxy>();
-        var mockHubCallerContext = new Mock<HubCallerContext>();
-        
-        mockOthersClient.Setup(client => client.SendCoreAsync(
-                It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-            .Verifiable("Message should be sent to others");;
-        mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
-        mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
-        mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
-        
-        var hub = new GridHub(dbContext) { Clients = mockClients.Object, Context = mockHubCallerContext.Object};
+        var hub = new GridHub(dbContext) { Clients = _mockClients.Object, Context = _mockHubCallerContext.Object};
         
         var gridElementsWithPrize = dbContext.GridElements
             .Include(gridElement => gridElement.Prize!).Where(element => element.Prize == null);
@@ -133,7 +127,7 @@ public class GridHubTest
         
         //Assert
         object[] expectedElementForOthers = [flippedGridElement];
-        mockOthersClient.Verify(
+        _mockOthersClient.Verify(
             client => client.SendCoreAsync("UpdateGridElement", expectedElementForOthers, It.IsAny<CancellationToken>()),
             Times.Once(), // Ensures the method was called exactly once
             "Others should receive exactly one message");
@@ -148,19 +142,7 @@ public class GridHubTest
         //Arrange
         var dbContext = TestHelper.Setup("Mode=Memory;Cache=Shared");
         
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCallerClient = new Mock<ISingleClientProxy>();
-        var mockOthersClient = new Mock<ISingleClientProxy>();
-        var mockHubCallerContext = new Mock<HubCallerContext>();
-        
-        mockOthersClient.Setup(client => client.SendCoreAsync(
-                It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-            .Verifiable("Message should be sent to others");;
-        mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
-        mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
-        mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
-        
-        var hub = new GridHub(dbContext) { Clients = mockClients.Object, Context = mockHubCallerContext.Object};
+        var hub = new GridHub(dbContext) { Clients = _mockClients.Object, Context = _mockHubCallerContext.Object};
         
         var gridElementsWithPrize = dbContext.GridElements
             .Include(gridElement => gridElement.Prize!).Where(element => element.Prize == null);
@@ -172,7 +154,7 @@ public class GridHubTest
         var flippedGridElement2 = await hub.FlipGridElement(selectedPrize2.Index);
         //Assert
         object[] expectedElementForOthers = [flippedGridElement];
-        mockOthersClient.Verify(
+        _mockOthersClient.Verify(
             client => client.SendCoreAsync("UpdateGridElement", expectedElementForOthers, It.IsAny<CancellationToken>()),
             Times.Once(), // Ensures the method was called exactly once
             "Others should receive exactly one message");
