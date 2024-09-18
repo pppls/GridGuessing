@@ -5,17 +5,24 @@
     @if (HasElementBeenFlipped(Element))
     {
         var flippedElement = (FlippedGridElementExt)Element;
-        var (_, youWon) = GetWinOrLose(flippedElement);
-        <span class="number @(youWon ? "win" : "lose")">@(youWon ? ((MonetaryPrizeResult)flippedElement.result).value : "X")</span>
+        var popUpText = GetWinOrLosePopUpText(flippedElement);
+        var elementHasPrize = flippedElement.result is MonetaryPrizeResult;
+        <span class="number @(elementHasPrize ? (((MonetaryPrizeResult)flippedElement.result).value == 25000 ? "bigWin" : "win") : "lose")">@(elementHasPrize? ((MonetaryPrizeResult)flippedElement.result).value : "X")</span>
+        @if (showPopup)
+        {
+            <div class="popup">
+                @(popUpText)
+            </div>
+        }
     }
-    
+
 </div>
 
 @code {
     bool showPopup = false;
     [Parameter] public required GridElementExt Element { get; set; }
     [Parameter] public required HubConnection HubConnection { get; set; }
-    [Parameter] public required Action<SquareComponent> RegisterComponent { get; set; }
+    [Parameter] public required Action<SquareComponent> RegisterComponent { get; set; } //Required for efficient rendering
 
     protected override void OnInitialized()
     {
@@ -31,43 +38,42 @@
     private async Task Flip()
     {
         if (Element is UnflippedGridElementExt)
-        {
+        {                    
             Element = await HubConnection.InvokeAsync<GridElementExt>("FlipGridElement", Element.index);
             switch (Element)
             {
                 case FlippedGridElementExt _:
                     showPopup = true;
                     await InvokeAsync(StateHasChanged);
-                    await Task.Delay(1500);
+                    await Task.Delay(2000);
                     showPopup = false;
                     await InvokeAsync(StateHasChanged);
                     break;
                 case UnflippedGridElementExt _:
+                    await InvokeAsync(StateHasChanged);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(Element));
             }
-
-            
         }
     }
     
-    public (string, bool) GetWinOrLose(FlippedGridElementExt elementExt)
+    public string GetWinOrLosePopUpText(FlippedGridElementExt elementExt)
     {
         switch (elementExt.result)
         {
             case MonetaryPrizeResult prize:
                 if (prize.areYouTheFirstFlipper)
                 {
-                    return ($"You won {prize} euros!", true);
+                    return $"You won {prize.value} euros!";
                 }
                 else
                 {
-                    return ("Someone else was just a bit faster...", true);
+                    return "Someone else was just a bit faster...";
                 }
 
             case NoPrizeResult _:
-                return ($"Too bad, so sad - you won nothing...", false);
+                return $"Too bad, so sad - you won nothing...";
             default:
                 throw new ArgumentOutOfRangeException();
         }
@@ -77,9 +83,9 @@
     {
         switch (elementExt)
         {
-            case FlippedGridElementExt flippedGridElement:
+            case FlippedGridElementExt _:
                 return true;
-            case UnflippedGridElementExt unflippedGridElement:
+            case UnflippedGridElementExt _:
                 return false;
             default:
                 throw new ArgumentOutOfRangeException(nameof(elementExt));

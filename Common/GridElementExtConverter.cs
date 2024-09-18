@@ -13,8 +13,7 @@ public class GridElementExtConverter : JsonConverter<GridElementExt>
             JsonElement root = doc.RootElement;
             if (root.TryGetProperty("result", out _))
             {
-                var rawText = root.GetProperty("result").GetRawText();
-                var flippedGridElementExt = JsonSerializer.Deserialize<FlippedGridElementExt>(rawText, options);
+                var flippedGridElementExt = JsonSerializer.Deserialize<FlippedGridElementExt>(root, options);
                 return flippedGridElementExt;
             }
             else

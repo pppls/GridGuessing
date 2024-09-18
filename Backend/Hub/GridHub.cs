@@ -37,33 +37,67 @@ public class GridHub : Hub
         }
         await base.OnConnectedAsync();
     }
-    
-    public async Task<FlippedGridElementExt> FlipGridElement(int index)
+
+    public async Task<GridElementExt> FlipGridElement(int index)
     {
-        var flippedElement = await _dbContext.GridElements.SingleAsync(x => x.Index == index);
-        var elementWasAlreadyFlipped = flippedElement.HasBeenFlipped;
-        if (!elementWasAlreadyFlipped)
+        //Hier moet je ook checken op de juiste promotional game, laat ik achterwegen
+        var selectedElement = await _dbContext.GridElements
+            .Include(el => el.Prize)
+            .SingleAsync(x => x.Index == index);
+        var thisClientHasAlreadyFlipped = _dbContext.GridElements
+            .Where(x => x.Flipper != null)
+            .Select(x => x.Flipper)
+            .Contains(Context.ConnectionId);
+        if (!thisClientHasAlreadyFlipped)
         {
-            flippedElement.HasBeenFlipped = true;
-            await _dbContext.SaveChangesAsync();
+            try
+            {
+                var elementWasAlreadyFlipped = selectedElement.HasBeenFlipped;
+                if (!elementWasAlreadyFlipped)
+                {
+                    selectedElement.HasBeenFlipped = true;
+                    selectedElement.Flipper = Context.ConnectionId;
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                FlippedGridElementExt flippedElementExt = (FlippedGridElementExt)MapDataToWeb(selectedElement);
+
+                FlipResult resultToReturn;
+                FlipResult resultToOthers;
+                switch (flippedElementExt.result)
+                {
+                    case MonetaryPrizeResult monetaryPrizeResult:
+                        resultToReturn = monetaryPrizeResult with
+                        {
+                            areYouTheFirstFlipper = !elementWasAlreadyFlipped
+                        };
+                        resultToOthers = monetaryPrizeResult with
+                        {
+                            areYouTheFirstFlipper = false
+                        };
+                        break;
+                    case NoPrizeResult noPrizeResult:
+                        resultToReturn = noPrizeResult;
+                        resultToOthers = noPrizeResult;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                await Clients.Others.SendAsync("UpdateGridElement", flippedElementExt with { result = resultToOthers });
+                return flippedElementExt with { result = resultToReturn };
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return await FlipGridElement(index);
+            }
         }
-        FlippedGridElementExt flippedElementExt = (FlippedGridElementExt)MapDataToWeb(flippedElement);
-        FlipResult flipResult = (flippedElementExt.result) switch 
-        {
-            MonetaryPrizeResult prizeResult => prizeResult with { AreYouTheFirstFlipper = elementWasAlreadyFlipped },
-            NoPrizeResult noPrizeResult => noPrizeResult
-        };
-        
-        var finalFlippedElement = flippedElementExt with { result = flipResult };
-        
-        await Clients.Others.SendAsync("UpdateGridElement", finalFlippedElement);
-        
-        return finalFlippedElement;
+        return MapDataToWeb(selectedElement);
     }
-    
+
     private GridElementExt[] GetGridData()
     {
-        return _dbContext.GridElements.Select(MapDataToWeb).ToArray();
+        return _dbContext.GridElements.Include(x => x.Prize).Select(MapDataToWeb).ToArray();
     }
 
     private static GridElementExt MapDataToWeb(GridElement element)
@@ -77,7 +111,7 @@ public class GridHub : Hub
                         return new FlippedGridElementExt(new NoPrizeResult(), element.Index);
                     case MonetaryPrize monetaryPrize:
                         return new FlippedGridElementExt(new MonetaryPrizeResult(!element.HasBeenFlipped, (int)monetaryPrize.MonetaryValue), element.Index);
-                    case NonMonetaryPrize nonMonetaryPrize:
+                    case NonMonetaryPrize _:
                         throw new NotImplementedException("Non-monetary prizes have yet to be implemented.");
                     default:
                         throw new ArgumentOutOfRangeException();

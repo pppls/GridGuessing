@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Common;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Options;
 
@@ -45,17 +44,20 @@ public class AdditionalClientsController : Controller
     private async Task SimulateClient( BlockingCollection<int> indices)
     {
         var apiurl = $"{_baseUrl}gridHub";
-        var hubConnection = new HubConnectionBuilder()
+        HubConnection hubConnection = new HubConnectionBuilder()
             .WithUrl(apiurl)
             .Build();
-
         try
         {
-            await hubConnection.StartAsync();
             while (indices.TryTake(out int item))
             {
                 await Task.Delay(1000);
+                await hubConnection.StartAsync();
                 await hubConnection.InvokeAsync("FlipGridElement", item);
+                await hubConnection.DisposeAsync();
+                hubConnection = new HubConnectionBuilder() //hacky manier om connection te omzeilen
+                    .WithUrl(apiurl)
+                    .Build();
             }
         }
         finally

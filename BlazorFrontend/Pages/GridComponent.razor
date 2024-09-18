@@ -6,7 +6,7 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Nederlandse Loterij - Klik en win! </h1>
+<h1> Klik en win! </h1>
 @if (grid != null)
 {
     <div class="grid">
@@ -16,12 +16,7 @@
         }
     </div>
     
-    @if (showPopup)
-    {
-        <div class="popup">
-            You @(lastPrize > 0 ? "won! Prize: " + lastPrize : "lost!")
-        </div>
-    }
+
 }
 else
 {
@@ -77,46 +72,9 @@ else
     {
         squareComponents[component.Element.index] = component;
     }
-
-    public (string, bool) GetWinOrLose(FlippedGridElementExt elementExt)
-    {
-        switch (elementExt.result)
-        {
-            case MonetaryPrizeResult prize:
-                if (prize.areYouTheFirstFlipper)
-                {
-                    return ($"You won {prize} euros!", true);
-                }
-                else
-                {
-                    return ("Someone else was just a bit faster...", false);
-                }
-
-            case NoPrizeResult _:
-                return ($"Too bad, so sad - you won nothing...", false);
-            default:
-                throw new ArgumentOutOfRangeException(nameof(elementExt.result), elementExt.result, "Invalid value for switch case.");
-        }
-    }
-    
-    public bool HasElementBeenFlipped(GridElementExt elementExt)
-    {
-        switch (elementExt)
-        {
-            case FlippedGridElementExt flippedGridElement:
-                return true;
-            case UnflippedGridElementExt unflippedGridElement:
-                return false;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(elementExt));
-        }
-    }
     
     public async ValueTask DisposeAsync()
     {
-        if (_hubConnection is not null)
-        {
-            await _hubConnection.DisposeAsync();
-        }
+        await _hubConnection.DisposeAsync();
     }
 }

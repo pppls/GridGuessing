@@ -22,12 +22,16 @@ public class GridHubTest
         var mockClients = new Mock<IHubCallerClients>();
         var mockCallerClient = new Mock<ISingleClientProxy>();
         var mockOthersClient = new Mock<ISingleClientProxy>();
+        var mockHubCallerContext = new Mock<HubCallerContext>();
+        var mockHubCallerContext2 = new Mock<HubCallerContext>();
         
         mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
         mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
+        mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
+        mockHubCallerContext2.Setup(Context => Context.ConnectionId).Returns("2");
         
-        var hub1 = new GridHub(dbContext) { Clients = mockClients.Object };
-        var hub2 = new GridHub(dbContext2) { Clients = mockClients.Object };
+        var hub1 = new GridHub(dbContext) { Clients = mockClients.Object, Context = mockHubCallerContext.Object};
+        var hub2 = new GridHub(dbContext2) { Clients = mockClients.Object, Context = mockHubCallerContext2.Object };
         
         var gridElementsWithPrize = dbContext.GridElements
             .Include(gridElement => gridElement.Prize!).Where(element => element.Prize is MonetaryPrize);
@@ -36,10 +40,10 @@ public class GridHubTest
         var selectedPrize = gridElementsWithPrize.Include(gridElement => gridElement.Prize!).First();
         var flip1 = Task.Run(() => hub1.FlipGridElement(selectedPrize.Index));
         var flip2 = Task.Run(() => hub2.FlipGridElement(selectedPrize.Index));
-        Task<FlippedGridElementExt>[] tasks = [flip1, flip2];
+        Task<GridElementExt>[] tasks = [flip1, flip2];
         var results = await Task.WhenAll(tasks);
-        var prizeFirstTime = results[0];
-        var prizeSecondTime = results[1];
+        var prizeFirstTime = (FlippedGridElementExt)results[0];
+        var prizeSecondTime = (FlippedGridElementExt)results[1];
         
         //Assert
         var firstMonetaryPrizeResult = (MonetaryPrizeResult)prizeFirstTime.result;
@@ -64,6 +68,11 @@ public class GridHubTest
         var mockClients = new Mock<IHubCallerClients>();
         var mockCallerClient = new Mock<ISingleClientProxy>();
         var mockOthersClient = new Mock<ISingleClientProxy>();
+        var mockHubCallerContext = new Mock<HubCallerContext>();
+        
+        mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
+        mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
+        mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
         
         mockOthersClient.Setup(client => client.SendCoreAsync(
                 It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
@@ -71,14 +80,14 @@ public class GridHubTest
         mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
         mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
         
-        var hub = new GridHub(dbContext) { Clients = mockClients.Object };
+        var hub = new GridHub(dbContext) { Clients = mockClients.Object, Context = mockHubCallerContext.Object };
         
         var gridElementsWithPrize = dbContext.GridElements
             .Include(gridElement => gridElement.Prize!).Where(element => element.Prize is MonetaryPrize);
         
         //Act
         var selectedPrize = gridElementsWithPrize.Include(gridElement => gridElement.Prize!).First();
-        var flippedGridElement = await hub.FlipGridElement(selectedPrize.Index);
+        var flippedGridElement = (FlippedGridElementExt) await hub.FlipGridElement(selectedPrize.Index);
         
         //Assert
         var monetaryPrizeResult = (MonetaryPrizeResult)flippedGridElement.result;
@@ -104,21 +113,23 @@ public class GridHubTest
         var mockClients = new Mock<IHubCallerClients>();
         var mockCallerClient = new Mock<ISingleClientProxy>();
         var mockOthersClient = new Mock<ISingleClientProxy>();
+        var mockHubCallerContext = new Mock<HubCallerContext>();
         
         mockOthersClient.Setup(client => client.SendCoreAsync(
                 It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
             .Verifiable("Message should be sent to others");;
         mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
         mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
+        mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
         
-        var hub = new GridHub(dbContext) { Clients = mockClients.Object };
+        var hub = new GridHub(dbContext) { Clients = mockClients.Object, Context = mockHubCallerContext.Object};
         
         var gridElementsWithPrize = dbContext.GridElements
             .Include(gridElement => gridElement.Prize!).Where(element => element.Prize == null);
         
         //Act
         var selectedPrize = gridElementsWithPrize.Include(gridElement => gridElement.Prize!).First();
-        var flippedGridElement = await hub.FlipGridElement(selectedPrize.Index);
+        var flippedGridElement = (FlippedGridElementExt) await hub.FlipGridElement(selectedPrize.Index);
         
         //Assert
         object[] expectedElementForOthers = [flippedGridElement];
@@ -129,6 +140,46 @@ public class GridHubTest
         
         //Clicker should receive result with areYouTheFirstFlipper true
         (flippedGridElement.result is NoPrizeResult).Should().BeTrue();
+    }
+    
+    [Fact]
+    public async void WhenClientFlipsTwiceSecondTimeShouldNotUpdateElement_Test()
+    {
+        //Arrange
+        var dbContext = TestHelper.Setup("Mode=Memory;Cache=Shared");
+        
+        var mockClients = new Mock<IHubCallerClients>();
+        var mockCallerClient = new Mock<ISingleClientProxy>();
+        var mockOthersClient = new Mock<ISingleClientProxy>();
+        var mockHubCallerContext = new Mock<HubCallerContext>();
+        
+        mockOthersClient.Setup(client => client.SendCoreAsync(
+                It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Verifiable("Message should be sent to others");;
+        mockClients.Setup(clients => clients.Caller).Returns(mockCallerClient.Object);
+        mockClients.Setup(clients => clients.Others).Returns(mockOthersClient.Object);
+        mockHubCallerContext.Setup(Context => Context.ConnectionId).Returns("1");
+        
+        var hub = new GridHub(dbContext) { Clients = mockClients.Object, Context = mockHubCallerContext.Object};
+        
+        var gridElementsWithPrize = dbContext.GridElements
+            .Include(gridElement => gridElement.Prize!).Where(element => element.Prize == null);
+        
+        //Act
+        var selectedPrize = gridElementsWithPrize.Include(gridElement => gridElement.Prize!).First();
+        var flippedGridElement = (FlippedGridElementExt) await hub.FlipGridElement(selectedPrize.Index);
+        var selectedPrize2 = gridElementsWithPrize.Include(gridElement => gridElement.Prize!).ToList()[1];
+        var flippedGridElement2 = await hub.FlipGridElement(selectedPrize2.Index);
+        //Assert
+        object[] expectedElementForOthers = [flippedGridElement];
+        mockOthersClient.Verify(
+            client => client.SendCoreAsync("UpdateGridElement", expectedElementForOthers, It.IsAny<CancellationToken>()),
+            Times.Once(), // Ensures the method was called exactly once
+            "Others should receive exactly one message");
+        
+        //Clicker should receive result with areYouTheFirstFlipper true
+        (flippedGridElement.result is NoPrizeResult).Should().BeTrue();
+        (flippedGridElement2 is UnflippedGridElementExt).Should().BeTrue();
     }
     
     [Fact]
