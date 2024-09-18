@@ -10,13 +10,18 @@ public class FlipResultConverter : JsonConverter<FlipResult>
     {
         using (JsonDocument doc = JsonDocument.ParseValue(ref reader))
         {
-            if (doc.RootElement.TryGetProperty("Value", out _))
+            JsonElement root = doc.RootElement;
+            
+            if (root.TryGetProperty("areYouTheFirstFlipper", out _))
             {
-                return JsonSerializer.Deserialize<MonetaryPrizeResult>(doc.RootElement.GetRawText(), options);
+                var rawText = root.GetRawText();
+                var monetaryPrizeResult = JsonSerializer.Deserialize<MonetaryPrizeResult>(rawText, options);
+                Console.WriteLine(monetaryPrizeResult);
+                return monetaryPrizeResult;
             }
             else
             {
-                return JsonSerializer.Deserialize<NoPrizeResult>(doc.RootElement.GetRawText(), options);
+                return JsonSerializer.Deserialize<NoPrizeResult>(root.GetRawText(), options);
             }
         }
     }

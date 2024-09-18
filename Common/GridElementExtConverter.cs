@@ -11,14 +11,17 @@ public class GridElementExtConverter : JsonConverter<GridElementExt>
         using (JsonDocument doc = JsonDocument.ParseValue(ref reader))
         {
             JsonElement root = doc.RootElement;
-            
             if (root.TryGetProperty("result", out _))
             {
-                return JsonSerializer.Deserialize<FlippedGridElementExt>(root.GetRawText(), options);
+                var rawText = root.GetProperty("result").GetRawText();
+                var flippedGridElementExt = JsonSerializer.Deserialize<FlippedGridElementExt>(rawText, options);
+                return flippedGridElementExt;
             }
             else
             {
-                return JsonSerializer.Deserialize<UnflippedGridElementExt>(root.GetRawText(), options);
+                var rawText = root.GetRawText();
+                var unflippedGridElementExt = JsonSerializer.Deserialize<UnflippedGridElementExt>(rawText, options);
+                return unflippedGridElementExt;
             }
         }
     }
