@@ -36,6 +36,8 @@ public class GridElement
     public string Id { get; set; }
     public int Index { get; set; }
     public bool HasBeenFlipped { get; set; }
+    [Timestamp]
+    public byte[] Timestamp { get; set; }
     
     public string? PrizeId { get; set; }
     public Prize? Prize { get; set; }
