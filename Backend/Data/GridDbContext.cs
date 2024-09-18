@@ -13,6 +13,7 @@ public class GridDbContext : DbContext
     public DbSet<GridElement> GridElements { get; set; }
     
     public DbSet<GridPromotionalGame> PromotionalGames { get; set; }
+    
     public DbSet<Prize> Prizes { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -68,7 +69,7 @@ public abstract class Prize
 
 public class MonetaryPrize : Prize
 {
-    public decimal MonetaryValue { get; set; } 
+    public decimal MonetaryValue { get; set; }  //In de praktijk zal je ook valuta moeten specificeren, dat laat ik nu achterwege
 }
 
 public class NonMonetaryPrize : Prize
@@ -83,5 +84,5 @@ public class GridPromotionalGame
     public string Id { get; set; }
     public string Name { get; set; }
     
-    public List<GridElement> GridElements { get; set; }
+    public List<GridElement>? GridElements { get; set; }
 }
