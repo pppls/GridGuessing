@@ -36,6 +36,8 @@ public class GridElement
     public string Id { get; set; }
     public int Index { get; set; }
     public bool HasBeenFlipped { get; set; }
+    public string? Flipper { get; set; }
+    
     [Timestamp]
     public byte[] Timestamp { get; set; }
     
